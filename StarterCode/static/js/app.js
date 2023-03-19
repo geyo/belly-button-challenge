@@ -1,109 +1,169 @@
 //Use D3 Library to read in data from url
 const bb_json = "https://2u-data-curriculum-team.s3.amazonaws.com/dataviz-classroom/v1.1/14-Interactive-Web-Visualizations/02-Homework/samples.json";
 
-//Initialize variables used.
-let sampleData;
-let sample_values = [];
-let otu_ids = [];
-let otu_labels = [];
+//Initialize arrays used.
 let person_id = [];
 
-//Wrap with a "then" to get a 'promise' from server. 
+//Wrap all code w/ "then" to secure promise from server to retrieve data. 
 d3.json(bb_json).then((data) => {
     //JSON data structure: 
-    //level 1: metadata, names, samples
-    //level 2 for samples: id, otu_ids, sample_values, otu_labels
-    
-    //store data under samples.
+    //metadata, names, samples
+        //metadata: id, ethnicity, gender, age, location, bbtype, wfreq
+        //samples: id, otu_ids, sample_values, otu_labels
+
+    //store sample data.
     samples = data.samples;
+    metadata = data.metadata;
        
-    //for loop to iterate t/ samples and add datapoint to arrays.
+    //populate person_id array.
     for (i = 0; i < samples.length; i++){
         person_id.push(samples[i]["id"]);
-        sample_values.push(samples[i]["sample_values"]);
-        otu_ids.push(samples[i]["otu_ids"]);
-        otu_labels.push(samples[i]["otu_labels"]);
     };
 
-    //HORIZONTAL BAR CHART: TOP 10 OTUS PER PERSON W DROPDOWN 
+    //HORIZONTAL BAR CHART: TOP 10 OTUS PER PERSON
     //Grab dropdown in html
     let dropdown = d3.select("#selDataset");
-    //Add id as options in the dropdown.
+    //Add each person's id as options in the dropdown.
     for (i = 0; i < person_id.length; i++){
         d3.select("#selDataset").append("option").text(person_id[i]);
     };
 
     // Function to generate horizontal bar chart of top 10 OTUs
     function create_bar (selected_id) {
-        selected_id = d3.event.target.value;
+        selected_id = d3.event.target.value; //capture selection
         //use selected option to look up the index w/n array.
         index = person_id.indexOf(selected_id);
-        personData = samples[index]; //store person's data.
+        personData = samples[index]; //store person's sample data.
 
         //sort and slice top 10 OTUs
         //create an array of arrays: inner array = [index, otu_id, otu_labels, sample_value]
         let otusAndSample = personData.otu_ids.map((otu_id, idx) => 
             [idx, otu_id, personData.otu_labels[idx], personData.sample_values[idx]]);
         otusAndSample.sort((a,b) => b[3] - a[3]); //sort by ascending by sample_values
-        otusAndSample = otusAndSample.slice(0,10); //grab top 10
+        sortedOtusAndSample = otusAndSample.slice(0,10); //grab top 10
         
+        //prep barData
         //prepare x-values (otu_ids)
-        xValues = otusAndSample.map((x) => `OTU: ${(x[1])}`); //make # into string
+        otuIdArray = sortedOtusAndSample.map((x) => `OTU: ${(x[1])}`); //make otu_id into string
         //prepare y-values (sample_values)
-        yValues = otusAndSample.map((x) => x[3]);
+        sampleArray = sortedOtusAndSample.map((x) => x[3]);
         //prepare hovertext (otu_labels)
-        hoverText = otusAndSample.map((x) => x[2]);
+        hoverText = sortedOtusAndSample.map((x) => x[2]);
         
-        //construct graph data and layout
-        let barData = {
-            x: xValues,
-            y: yValues,
+        //construct graph from barData and layout
+        let trace1 = {
+            x: sampleArray.reverse(), //reverse so top bar is the biggest bar
+            y: otuIdArray.reverse(),
+            orientation: 'h',
             type: "bar",
             hovertext: hoverText
         };
-
         let layout = {
-            title: `Top Ten OTUs from ID ${selected_id}`
+            title: `Top Ten OTUs from ID ${selected_id}`,
+            xaxis: {title: 'Size of Sample'},
         };
-
+        Plotly.newPlot("bar", [trace1], layout);
+        
         //testing
-        // console.log(selected_id);
-        // console.log(index);
-        console.log(personData);
-        console.log(otusAndSample);
-        // console.log(xValues);
-
-
-        //push graph to where html is
-        //d3.select("#bar").html();
-        Plotly.newPlot("bar", [barData], layout);
-
-
+        console.log("ID selected: " + selected_id); //log selected ID
+        console.log("Number of datapoints for id: " + otusAndSample.length);
+        //console.log(index);
+        //console.log(personData);
+        //console.log(otusAndSample);
+        //console.log(xValues);
     };
     
-    //event handler: when dropdown is selected, call create_bar. 
-    dropdown.on("change", create_bar);
 
 
-    //trigger when dropdown is selected
-
-        //Find top ten OTUs for id
-
-
+    // BUBBLE BAR CHART 
     // Create a bubble chart that displays each sample.
     // Use otu_ids for the x values.
     // Use sample_values for the y values.
     // Use sample_values for the marker size.
     // Use otu_ids for the marker colors.
     // Use otu_labels for the text values.
+    function create_bubble (selected_id) {
+        selected_id = d3.event.target.value; //capture selection
+        //use selected option to look up the index w/n array.
+        index = person_id.indexOf(selected_id);
+        personData = samples[index]; //store person's sample data.
 
+        //create an array of arrays: inner array = [index, otu_id, otu_labels, sample_value]
+        let otusAndSample = personData.otu_ids.map((otu_id, idx) => 
+            [idx, otu_id, personData.otu_labels[idx], personData.sample_values[idx]]);
+        sortedOtusAndSample = otusAndSample.sort((a,b) => b[3] - a[3]); //sort by ascending by sample_values
+        
+        //prep barData
+        //prepare x-values (otu_ids)
+        otuIdArray = sortedOtusAndSample.map((x) => x[1]); 
+        //prepare y-values (sample_values)
+        sampleArray = sortedOtusAndSample.map((x) => x[3]);
+        //prepare text values (otu_labels)
+        hoverText = sortedOtusAndSample.map((x) => x[2]);
+        
+        //construct graph from barData and layout
+        let trace1 = {
+            x: otuIdArray, //otu_ids for x
+            y: sampleArray, //sample_values for y
+            mode: "markers",
+            marker: {
+                size: sampleArray, //sample_values for marker size
+                color: otuIdArray //otu_ids for colors
+            }, 
+            text: hoverText //otu_labels for text values
+        };
+        let layout = {
+            title: `Sample Sizes from ID ${selected_id}`,
+            //xaxis: {title: 'Size of Sample'},
+        };
+        Plotly.newPlot("bubble", [trace1], layout);
+        
+        //testing
+        //console.log(index);
+        //console.log(personData);
+        //console.log(sortedOtusAndSample);
+        //console.log(xValues);
+        console.log(`bubble sizes: ${sampleArray}`);
+    };
 
+    // SAMPLE METADATA (DEMOGRAPHICS)
+    // Function to populate metadata
+    function populateMetadata (selected_id) {
+        selected_id = d3.event.target.value; //capture dropdown selection
+        index = person_id.indexOf(selected_id); //use selected option to look up the index w/n array.
+        personDemo = metadata[index]; //lookup demographic data w/ index. 
+        
+        //use '.html' to add additional code (an unordered list) to div for sample-metadata. 
+        d3.select("#sample-metadata")
+            .html(`<ul> 
+                        <li>id: ${personDemo.id}</li>
+                        <li>ethnicity: ${personDemo.ethnicity}</li>
+                        <li>gender: ${personDemo.gender}</li>
+                        <li>age: ${personDemo.age}</li>
+                        <li>location: ${personDemo.location}</li>
+                        <li>bbtype: ${personDemo.bbtype}</li>
+                        <li>wfreq: ${personDemo.wfreq}</li>           
+                   </ul>`);
 
-    // Display the sample metadata, i.e., an individual's demographic information.
+        //testing
+        console.log(personDemo);
+    };
 
     // Display each key-value pair from the metadata JSON object somewhere on the page.
+        //ADD CODE HERE OR UPDATE ABOVE
+    
+    
 
-    // Update all the plots when a new sample is selected. Additionally, you are welcome to create any layout that you would like for your dashboard. An example dashboard is shown as follows:
+
+        
+    // Update all the plots when a new sample is selected. 
+    function allCharts(){
+        create_bar();
+        populateMetadata();
+        create_bubble();
+    };
+
+    dropdown.on("change", allCharts);
 
     // Deploy your app to a free static page hosting service, such as GitHub Pages. Submit the links to your deployment and your GitHub repo. Ensure that your repository has regular commits and a thorough README.md file
 
